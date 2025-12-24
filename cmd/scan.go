@@ -33,7 +33,7 @@ var scanCmd = &cobra.Command{
 		if deep {
 			color.Red("DEEP SCAN ENABLED: Ignoring anchor file checks.\n")
 		}
-		color.Cyan("TidyUp Scanning: %s (Older than %d days)\n", path, days)
+		color.Cyan(" TidyUp Scanning: %s (Older than %d days)\n", path, days)
 
 		results := make(chan ScanResult)
 		var wg sync.WaitGroup
@@ -48,7 +48,7 @@ var scanCmd = &cobra.Command{
 				case <-stopUI:
 					return
 				default:
-					fmt.Printf("\rScanned: %d directories...", scannedCount)
+					fmt.Printf("\r Scanned: %d directories...", scannedCount)
 					time.Sleep(100 * time.Millisecond)
 				}
 			}
@@ -69,7 +69,7 @@ var scanCmd = &cobra.Command{
 				for _, m := range matchers {
 					if d.Name() == m.TargetDir {
 						if deep {
-							// Deep Scan: Just check the folder's own age/existence
+							// Deep Scan: Just check the folder's own age
 							info, err := d.Info()
 							if err == nil && time.Since(info.ModTime()) > threshold {
 								size, _ := dirSize(p)

@@ -1,5 +1,4 @@
 blocklist:
-  - "node_modules"
   - "AppData"
   - "CustomSecretFolder"
 

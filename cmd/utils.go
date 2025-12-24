@@ -55,7 +55,7 @@ func isSafe(path string) bool {
 
 	for _, part := range parts {
 		for _, blocked := range blocklist {
-			// Blocking if a PARENT folder is in the blocklist.
+			// Blocking if a PARENT folder is in the blocklist
 			if strings.EqualFold(part, blocked) && !isTargetDir(part) {
 				return false
 			}

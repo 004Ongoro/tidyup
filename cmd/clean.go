@@ -23,9 +23,9 @@ var cleanCmd = &cobra.Command{
 
 		matchers := getMatchers()
 
-		color.Magenta("TidyUp Cleanup initialized...")
+		color.Magenta(" TidyUp Cleanup initialized...")
 		if deep {
-			color.Red("Deep Mode: Targeting all matched folders regardless of anchor files.")
+			color.Red("  Deep Mode: Targeting all matched folders regardless of anchor files.")
 		}
 
 		var targets []string
@@ -65,7 +65,7 @@ var cleanCmd = &cobra.Command{
 		fmt.Printf(" Done! (Scanned %d directories)\n", scannedCount)
 
 		if len(targets) == 0 {
-			color.Cyan("Nothing to clean! Your drive is tidy.")
+			color.Cyan(" Nothing to clean! Your drive is tidy.")
 			return
 		}
 
@@ -83,13 +83,13 @@ var cleanCmd = &cobra.Command{
 		for _, folder := range toDelete {
 			fmt.Printf("Removing %s...", folder)
 			if err := os.RemoveAll(folder); err != nil {
-				color.Red(" Error: %v", err)
+				color.Red("  Error: %v", err)
 			} else {
-				color.Green(" Done")
+				color.Green("  Done")
 			}
 		}
 
-		color.HiMagenta("\nFinished! Cleaned %d folders.", len(toDelete))
+		color.HiMagenta("\n Finished! Cleaned %d folders.", len(toDelete))
 	},
 }
 
