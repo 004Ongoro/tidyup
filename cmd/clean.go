@@ -19,19 +19,23 @@ var cleanCmd = &cobra.Command{
 		days, _ := cmd.Flags().GetInt("days")
 		force, _ := cmd.Flags().GetBool("force")
 		deep, _ := cmd.Flags().GetBool("deep")
+		dryRun, _ := cmd.Flags().GetBool("dry-run")
 		threshold := time.Duration(days) * 24 * time.Hour
 
 		matchers := getMatchers()
 
-		color.Magenta(" TidyUp Cleanup initialized...")
+		color.Magenta("TidyUp Cleanup initialized...")
 		if deep {
 			color.Red("  Deep Mode: Targeting all matched folders regardless of anchor files.")
+		}
+		if dryRun {
+			color.Yellow("  DRY RUN ENABLED: No files will be deleted.")
 		}
 
 		var targets []string
 		var scannedCount int
 
-		fmt.Print("🔍 Looking for targets...")
+		fmt.Print("Looking for targets...")
 		filepath.WalkDir(path, func(p string, d os.DirEntry, err error) error {
 			scannedCount++
 			if err != nil || !isSafe(p) {
@@ -81,6 +85,11 @@ var cleanCmd = &cobra.Command{
 		}
 
 		for _, folder := range toDelete {
+			if dryRun {
+				color.Yellow("[DRY-RUN] Would remove: %s", folder)
+				continue
+			}
+
 			fmt.Printf("Removing %s...", folder)
 			if err := os.RemoveAll(folder); err != nil {
 				color.Red("  Error: %v", err)
@@ -89,7 +98,11 @@ var cleanCmd = &cobra.Command{
 			}
 		}
 
-		color.HiMagenta("\n Finished! Cleaned %d folders.", len(toDelete))
+		if dryRun {
+			color.HiYellow("\n Dry run complete. No changes were made.")
+		} else {
+			color.HiMagenta("\n Finished! Cleaned %d folders.", len(toDelete))
+		}
 	},
 }
 
@@ -99,4 +112,5 @@ func init() {
 	cleanCmd.Flags().IntP("days", "d", 30, "Age threshold")
 	cleanCmd.Flags().BoolP("force", "f", false, "Skip confirmation")
 	cleanCmd.Flags().Bool("deep", false, "Perform deep scan (ignore anchor files)")
+	cleanCmd.Flags().Bool("dry-run", false, "Simulate cleanup without deleting files")
 }

@@ -58,12 +58,13 @@ func getMatchers() []ProjectMatcher {
 }
 
 func isSafe(path string) bool {
-	parts := strings.Split(path, string(os.PathSeparator))
+	normalizedPath := strings.ReplaceAll(path, "\\", "/")
+	parts := strings.Split(normalizedPath, "/")
+
 	blocklist := getBlocklist()
 
 	for _, part := range parts {
 		for _, blocked := range blocklist {
-			// Blocking if a PARENT folder is in the blocklist
 			if strings.EqualFold(part, blocked) && !isTargetDir(part) {
 				return false
 			}

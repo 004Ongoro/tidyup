@@ -88,6 +88,16 @@ tidyup schedule --remove
 
 ---
 
+## Safe Cleanup(For Testing)
+
+```bash
+# Simulate a cleanup without deleting files
+tidyup clean --dry-run
+
+# Force a cleanup (useful for automated tasks)
+tidyup clean --force
+```
+
 ## ⚙️ Configuration
 
 Create a `.tidyup.yaml` at `$HOME` or project root to override defaults.
@@ -114,6 +124,16 @@ matchers:
 You can also pass a custom config file with `--config /path/to/.tidyup.yaml`.
 
 ---
+
+
+## 📋 Testing
+
+TidyUp includes a robust test suite to ensure path safety across different operating systems.
+
+```bash
+
+go test ./cmd -v
+```
 
 ## 🔧 CLI Reference
 

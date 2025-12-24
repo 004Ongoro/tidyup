@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -15,10 +16,10 @@ import (
 )
 
 type ScanResult struct {
-	Type string
-	Path string
-	Size int64
-	Time time.Time
+	Type string    `json:"type"`
+	Path string    `json:"path"`
+	Size int64     `json:"size"`
+	Time time.Time `json:"last_modified"`
 }
 
 var scanCmd = &cobra.Command{
@@ -28,38 +29,45 @@ var scanCmd = &cobra.Command{
 		path, _ := cmd.Flags().GetString("path")
 		days, _ := cmd.Flags().GetInt("days")
 		deep, _ := cmd.Flags().GetBool("deep")
+		jsonMode, _ := cmd.Flags().GetBool("json")
 		threshold := time.Duration(days) * 24 * time.Hour
 
 		matchers := getMatchers()
-		if deep {
-			color.Red("DEEP SCAN ENABLED: Ignoring anchor file checks.\n")
-		}
-		color.Cyan("TidyUp Scanning: %s (Older than %d days)\n", path, days)
 
 		results := make(chan ScanResult, 100)
+		var resultsSlice []ScanResult
 		var wg sync.WaitGroup
 		var totalSaved int64
-		var scannedCount int64 // Atomic for thread-safety
+		var scannedCount int64
 		count := 0
 
 		// UI Goroutine
 		stopUI := make(chan bool)
-		go func() {
-			for {
-				select {
-				case <-stopUI:
-					return
-				default:
-					fmt.Printf("\rScanned: %d directories...", atomic.LoadInt64(&scannedCount))
-					time.Sleep(100 * time.Millisecond)
-				}
+		if !jsonMode {
+			if deep {
+				color.Red("DEEP SCAN ENABLED: Ignoring anchor file checks.\n")
 			}
-		}()
+			color.Cyan("TidyUp Scanning: %s (Older than %d days)\n", path, days)
+
+			go func() {
+				for {
+					select {
+					case <-stopUI:
+						return
+					default:
+						fmt.Printf("\rScanned: %d directories...", atomic.LoadInt64(&scannedCount))
+						time.Sleep(100 * time.Millisecond)
+					}
+				}
+			}()
+		}
 
 		// Find immediate subdirectories to distribute to workers
 		entries, err := os.ReadDir(path)
 		if err != nil {
-			color.Red("Error reading path: %v", err)
+			if !jsonMode {
+				color.Red("Error reading path: %v", err)
+			}
 			return
 		}
 
@@ -75,8 +83,8 @@ var scanCmd = &cobra.Command{
 			wg.Add(1)
 			go func(subDir string) {
 				defer wg.Done()
-				semaphore <- struct{}{}        // Acquire worker slot
-				defer func() { <-semaphore }() // Release worker slot
+				semaphore <- struct{}{}
+				defer func() { <-semaphore }()
 
 				fullSubPath := filepath.Join(path, subDir)
 				filepath.WalkDir(fullSubPath, func(p string, d os.DirEntry, err error) error {
@@ -118,18 +126,34 @@ var scanCmd = &cobra.Command{
 		go func() {
 			wg.Wait()
 			close(results)
-			stopUI <- true
+			if !jsonMode {
+				stopUI <- true
+			}
 		}()
 
-		fmt.Println()
+		if !jsonMode {
+			fmt.Println()
+		}
+
 		for res := range results {
 			count++
 			atomic.AddInt64(&totalSaved, res.Size)
-			fmt.Print("\r\033[K")
-			color.Red("[STALE] ")
-			fmt.Printf("%-10s ", res.Type)
-			color.Green("%-10s ", formatSize(res.Size))
-			color.HiBlack("| %s (%s)\n", res.Path, res.Time.Format("2006-01-02"))
+
+			if jsonMode {
+				resultsSlice = append(resultsSlice, res)
+			} else {
+				fmt.Print("\r\033[K")
+				color.Red("[STALE] ")
+				fmt.Printf("%-10s ", res.Type)
+				color.Green("%-10s ", formatSize(res.Size))
+				color.HiBlack("| %s (%s)\n", res.Path, res.Time.Format("2006-01-02"))
+			}
+		}
+
+		if jsonMode {
+			output, _ := json.MarshalIndent(resultsSlice, "", "  ")
+			fmt.Println(string(output))
+			return
 		}
 
 		fmt.Printf("\r\033[K")
@@ -143,4 +167,5 @@ func init() {
 	scanCmd.Flags().StringP("path", "p", ".", "Path to scan")
 	scanCmd.Flags().IntP("days", "d", 30, "Age threshold")
 	scanCmd.Flags().Bool("deep", false, "Perform deep scan (ignore anchor files)")
+	scanCmd.Flags().Bool("json", false, "Output results in JSON format")
 }
