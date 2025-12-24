@@ -94,7 +94,6 @@ Please ensure:
 - Code is formatted with `gofmt -w .`
 - Run basic static checks: `go vet ./...` and `staticcheck ./...` (optional)
 
-If you'd like, we can add a GitHub Actions workflow that runs these checks on every PR.
 
 ---
 
