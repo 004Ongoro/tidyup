@@ -20,6 +20,8 @@ var cleanCmd = &cobra.Command{
 		force, _ := cmd.Flags().GetBool("force")
 		threshold := time.Duration(days) * 24 * time.Hour
 
+		matchers := getMatchers()
+
 		color.Magenta("TidyUp Cleanup initialized...")
 
 		var targets []string

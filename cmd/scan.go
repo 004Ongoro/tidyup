@@ -12,21 +12,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type ProjectMatcher struct {
-	Name       string
-	TargetDir  string
-	AnchorFile string
-}
-
-var matchers = []ProjectMatcher{
-	{"Node.js", "node_modules", "package.json"},
-	{"Rust", "target", "Cargo.toml"},
-	{"Python", "venv", "requirements.txt"},
-	{"Python", ".venv", "pyproject.toml"},
-	{"Maven", "target", "pom.xml"},
-	{"Gradle", "build", "build.gradle"},
-}
-
 type ScanResult struct {
 	Type string
 	Path string
@@ -37,15 +22,14 @@ type ScanResult struct {
 var scanCmd = &cobra.Command{
 	Use:   "scan",
 	Short: "Scan for stale project dependencies",
-	Long: `Scans the provided directory (defaulting to current) for known project 
-			types. It checks the modification date of 'anchor' files (like package.json) 
-			to determine if a project is stale.
-
-			This command is read-only and will not delete any files.`,
+	Long: `Scans the provided directory for known project types. 
+It checks the modification date of anchor files to determine if a project is stale.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		path, _ := cmd.Flags().GetString("path")
 		days, _ := cmd.Flags().GetInt("days")
 		threshold := time.Duration(days) * 24 * time.Hour
+
+		matchers := getMatchers()
 
 		color.Cyan("TidyUp Scanning: %s (Older than %d days)\n", path, days)
 
@@ -54,11 +38,16 @@ var scanCmd = &cobra.Command{
 		var totalSaved int64
 		count := 0
 
-		// Spinner/Loading indicator simulator
+		stopSpinner := make(chan bool)
 		go func() {
 			for {
-				fmt.Print(".")
-				time.Sleep(500 * time.Millisecond)
+				select {
+				case <-stopSpinner:
+					return
+				default:
+					fmt.Print(".")
+					time.Sleep(500 * time.Millisecond)
+				}
 			}
 		}()
 
@@ -100,8 +89,9 @@ var scanCmd = &cobra.Command{
 			color.HiBlack("| %s (%s)\n", res.Path, res.Time.Format("2006-01-02"))
 		}
 
+		stopSpinner <- true
 		wg.Wait()
-		fmt.Println(strings.Repeat("-", 60))
+		fmt.Println("\n" + strings.Repeat("-", 60))
 		color.HiYellow("Summary: Found %d folders | Total Space: %s", count, formatSize(totalSaved))
 	},
 }

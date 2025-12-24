@@ -1,0 +1,9 @@
+blocklist:
+  - "node_modules"
+  - "AppData"
+  - "CustomSecretFolder"
+
+matchers:
+  - name: "C++ Build"
+    target_dir: "build"
+    anchor_file: "CMakeLists.txt"
