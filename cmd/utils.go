@@ -16,6 +16,14 @@ type ProjectMatcher struct {
 	AnchorFile string `mapstructure:"anchor_file"`
 }
 
+func GetExecutablePath() (string, error) {
+	ex, err := os.Executable()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Abs(ex)
+}
+
 // getBlocklist retrieves the list from config or returns defaults
 func getBlocklist() []string {
 	defaults := []string{
