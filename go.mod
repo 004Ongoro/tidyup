@@ -1,4 +1,4 @@
-module github.com/004ongoro/tidyup
+module github.com/004Ongoro/tidyup
 
 go 1.25.5
 
