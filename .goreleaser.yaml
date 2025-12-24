@@ -46,10 +46,6 @@ changelog:
       - "^test:"
 
 release:
-  github:
-    owner: 004Ongoro
-    name: tidyup
-  timeout: 30m
   footer: >-
 
     ---
