@@ -4,8 +4,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
+	"sync"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )
 
@@ -24,99 +27,87 @@ var matchers = []ProjectMatcher{
 	{"Gradle", "build", "build.gradle"},
 }
 
-// dirSize calculates the total size of a directory in bytes
-func dirSize(path string) (int64, error) {
-	var size int64
-	err := filepath.WalkDir(path, func(_ string, d os.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if !d.IsDir() {
-			info, err := d.Info()
-			if err != nil {
-				return err
-			}
-			size += info.Size()
-		}
-		return nil
-	})
-	return size, err
-}
-
-// formatSize converts bytes to a human-readable string
-func formatSize(bytes int64) string {
-	const unit = 1024
-	if bytes < unit {
-		return fmt.Sprintf("%d B", bytes)
-	}
-	div, exp := int64(unit), 0
-	for n := bytes / unit; n >= unit; n /= unit {
-		div *= unit
-		exp++
-	}
-	return fmt.Sprintf("%.1f %cB", float64(bytes)/float64(div), "KMGTPE"[exp])
+type ScanResult struct {
+	Type string
+	Path string
+	Size int64
+	Time time.Time
 }
 
 var scanCmd = &cobra.Command{
 	Use:   "scan",
 	Short: "Scan for stale project dependencies",
+	Long: `Scans the provided directory (defaulting to current) for known project 
+			types. It checks the modification date of 'anchor' files (like package.json) 
+			to determine if a project is stale.
+
+			This command is read-only and will not delete any files.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		path, _ := cmd.Flags().GetString("path")
 		days, _ := cmd.Flags().GetInt("days")
 		threshold := time.Duration(days) * 24 * time.Hour
 
-		fmt.Printf("🔍 Scanning %s for projects older than %d days...\n\n", path, days)
+		color.Cyan("TidyUp Scanning: %s (Older than %d days)\n", path, days)
 
+		results := make(chan ScanResult)
+		var wg sync.WaitGroup
 		var totalSaved int64
+		count := 0
 
-		err := filepath.WalkDir(path, func(p string, d os.DirEntry, err error) error {
-			if err != nil {
-				return filepath.SkipDir
+		// Spinner/Loading indicator simulator
+		go func() {
+			for {
+				fmt.Print(".")
+				time.Sleep(500 * time.Millisecond)
 			}
+		}()
 
-			if !isSafe(p) { return filepath.SkipDir }
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			filepath.WalkDir(path, func(p string, d os.DirEntry, err error) error {
+				if err != nil || !isSafe(p) {
+					return filepath.SkipDir
+				}
+				if !d.IsDir() || d.Name() == ".git" {
+					return nil
+				}
 
-			if !d.IsDir() {
-				return nil
-			}
-
-			// Skip hidden directories like .git
-			if d.Name() == ".git" || d.Name() == ".cache" {
-				return filepath.SkipDir
-			}
-
-			// Check matchers
-			for _, m := range matchers {
-				if d.Name() == m.TargetDir {
-					parent := filepath.Dir(p)
-					anchorPath := filepath.Join(parent, m.AnchorFile)
-
-					// Check if Anchor File exists
-					if info, err := os.Stat(anchorPath); err == nil {
-						// Age Check
-						if time.Since(info.ModTime()) > threshold {
-							size, _ := dirSize(p)
-							totalSaved += size
-							fmt.Printf("[STALE] %-10s | %-10s | %s\n",
-								m.Name, formatSize(size), p)
+				for _, m := range matchers {
+					if d.Name() == m.TargetDir {
+						anchor := filepath.Join(filepath.Dir(p), m.AnchorFile)
+						if info, err := os.Stat(anchor); err == nil {
+							if time.Since(info.ModTime()) > threshold {
+								size, _ := dirSize(p)
+								results <- ScanResult{m.Name, p, size, info.ModTime()}
+							}
+							return filepath.SkipDir
 						}
-						return filepath.SkipDir
 					}
 				}
-			}
-			return nil
-		})
+				return nil
+			})
+			close(results)
+		}()
 
-		if err != nil {
-			fmt.Printf("\nError during scan: %v\n", err)
+		fmt.Println()
+		for res := range results {
+			count++
+			totalSaved += res.Size
+			color.Red("[STALE] ")
+			fmt.Printf("%-10s ", res.Type)
+			color.Green("%-10s ", formatSize(res.Size))
+			color.HiBlack("| %s (%s)\n", res.Path, res.Time.Format("2006-01-02"))
 		}
 
-		fmt.Printf("\nDone! Potential space to reclaim: %s\n", formatSize(totalSaved))
+		wg.Wait()
+		fmt.Println(strings.Repeat("-", 60))
+		color.HiYellow("Summary: Found %d folders | Total Space: %s", count, formatSize(totalSaved))
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(scanCmd)
 	scanCmd.Flags().StringP("path", "p", ".", "Path to scan")
-	scanCmd.Flags().IntP("days", "d", 30, "Threshold of days since last use")
+	scanCmd.Flags().IntP("days", "d", 30, "Age threshold")
 }
