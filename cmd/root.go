@@ -26,7 +26,7 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.tidyup.yaml)")
-	rootCmd.Version = "0.7.2"
+	rootCmd.Version = "0.7.3"
 }
 
 func initConfig() {

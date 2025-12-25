@@ -45,8 +45,6 @@ changelog:
       - "^docs:"
       - "^test:"
 
-release:
-  footer: >-
 
 brews:
   - name: tidyup
@@ -69,6 +67,8 @@ scoops:
     description: "TidyUp: A smart manager for your developer 'junk' folders."
     license: "MIT"
 
+release:
+  footer: >-
     ---
 
     Released by [GoReleaser](https://github.com/goreleaser/goreleaser).
