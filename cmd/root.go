@@ -1,4 +1,4 @@
-package cmd
+﻿package cmd
 
 import (
 	"fmt"
@@ -26,7 +26,7 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.tidyup.yaml)")
-	rootCmd.Version = "0.6.0"
+	rootCmd.Version = "0.7.0"
 }
 
 func initConfig() {

@@ -48,6 +48,27 @@ changelog:
 release:
   footer: >-
 
+brews:
+  - name: tidyup
+    repository:
+      owner: 004Ongoro
+      name: homebrew-tap
+    directory: Formula
+    homepage: "https://github.com/004Ongoro/tidyup"
+    description: "A high-performance CLI tool to reclaim disk space from stale projects."
+    license: "MIT"
+    install: |
+      bin.install "tidyup"
+
+scoops:
+  - name: tidyup
+    repository:
+      owner: 004Ongoro
+      name: scoop-bucket
+    homepage: "https://github.com/004Ongoro/tidyup"
+    description: "TidyUp: A smart manager for your developer 'junk' folders."
+    license: "MIT"
+
     ---
 
     Released by [GoReleaser](https://github.com/goreleaser/goreleaser).

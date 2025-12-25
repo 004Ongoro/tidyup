@@ -33,4 +33,4 @@ jobs:
           args: release --clean
         env:
           # This token is automatically provided by GitHub Actions
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GORELEASER_TOKEN }}
